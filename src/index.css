@@ -36,3 +36,15 @@ code {
 pre {
   overflow-x: auto;
 }
+
+/* Fix react-syntax-highlighter table row highlight from Tailwind base */
+pre table {
+  background: transparent !important;
+  border: none !important;
+}
+pre tr,
+pre td {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
