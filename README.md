@@ -3,6 +3,10 @@
 คอร์สเรียน React และ TypeScript แบบครบวงจร พร้อม Live Demo ทุกบท
 สร้างด้วย Vite + React 18 + TypeScript + Tailwind CSS v4 + Axios
 
+## 🌐 เข้าใช้งานได้เลย (ไม่ต้อง login)
+
+**👉 https://siamrat27.github.io/react-learning/**
+
 ---
 
 ## 📚 เนื้อหาทั้งหมด (12 บท)
@@ -137,12 +141,14 @@ react-learning/
 
 ---
 
-## 💡 Features ของ Course
+## 💡 Features ของ Course (รวม Interactive Quiz)
 
 - **Sidebar navigation** พร้อม progress tracker — บันทึกความคืบหน้าอัตโนมัติ
 - **Code block** มี syntax highlight พร้อม copy button
 - **Callout boxes** สำหรับ info, tip, warning, definition
 - **Live Demo** ทุกบท — ทดลองโต้ตอบได้จริง
+- **Interactive Quiz** ทุกบท — ตอบคำถามถึงผ่านบทได้ (multiple-choice + fill-in-the-blank)
+- **Anatomy sections** อธิบายทุกบรรทัดของโค้ดพร้อมบอกว่า "ถ้าเอาออกจะเกิดอะไร"
 - **Glossary** 25+ คำ ค้นหาได้และ filter ตาม category
 - **Bottom navigation** เดินหน้า-ถอยหลังระหว่างบทได้ง่าย
 
