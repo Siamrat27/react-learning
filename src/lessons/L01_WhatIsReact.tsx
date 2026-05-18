@@ -3,8 +3,59 @@ import CodeBlock from '../components/CodeBlock'
 import Callout from '../components/Callout'
 import DemoBox from '../components/DemoBox'
 import Section from '../components/Section'
+import Exercise, { ExQuestion } from '../components/Exercise'
 
-export default function L01_WhatIsReact() {
+const questions: ExQuestion[] = [
+  {
+    type: 'choice',
+    question: 'React คืออะไร?',
+    choices: [
+      'JavaScript Framework เหมือน Angular หรือ Vue',
+      'JavaScript Library สำหรับสร้าง UI',
+      'ภาษา Programming ใหม่',
+      'Database สำหรับ web app',
+    ],
+    correct: 1,
+    explanation:
+      'React เป็น Library (ไม่ใช่ Framework) เราเป็นคนเรียกใช้มัน มันไม่ได้บังคับ structure ทั้งหมด ต่างจาก Angular ที่เป็น Framework เต็มรูปแบบ',
+  },
+  {
+    type: 'fill',
+    question: 'เมื่อ state เปลี่ยน React จะทำการ ___ component ใหม่เพื่ออัพเดต UI',
+    hint: 'คำนี้เริ่มต้นด้วย "re-"',
+    correct: ['re-render', 'render', 're render'],
+    explanation:
+      'React จะ re-render component ทุกครั้งที่ state หรือ props เปลี่ยน แต่จะอัพเดต Real DOM เฉพาะส่วนที่เปลี่ยนเท่านั้น (ผ่าน Virtual DOM)',
+  },
+  {
+    type: 'choice',
+    question: 'Virtual DOM แตกต่างจาก Real DOM อย่างไร?',
+    choices: [
+      'Virtual DOM ใหญ่กว่าและช้ากว่า',
+      'Virtual DOM เก็บใน memory เป็น JavaScript object ทำให้ update เร็วกว่า',
+      'Virtual DOM คือ HTML file พิเศษของ React',
+      'ไม่ต่างกัน ใช้แทนกันได้',
+    ],
+    correct: 1,
+    explanation:
+      'Virtual DOM คือ copy ของ DOM ที่เก็บใน JavaScript memory การ update object ใน memory เร็วกว่าการแก้ Real DOM มาก React compare Virtual DOM เก่ากับใหม่ (diffing) แล้วอัพเดต Real DOM เฉพาะที่เปลี่ยน',
+  },
+  {
+    type: 'choice',
+    question: 'Declarative Programming คืออะไร?',
+    choices: [
+      'บอกทุก step ที่ต้องทำ เช่น "สร้าง element → set text → append"',
+      'บอกแค่ว่า UI ควรเป็นอะไร React จัดการวิธีทำให้เอง',
+      'เขียน CSS ด้วย JavaScript',
+      'ประกาศตัวแปรด้วย let และ const',
+    ],
+    correct: 1,
+    explanation:
+      'Declarative = บอกผลลัพธ์ที่ต้องการ ("ฉันต้องการ <p>{count}</p>") React หาวิธีทำให้เอง — ตรงข้ามกับ Imperative ที่ต้องบอกทุก step เช่น document.createElement, textContent =, appendChild',
+  },
+]
+
+export default function L01_WhatIsReact({ onPass }: { onPass?: () => void }) {
   const [count, setCount] = useState(0)
   const [renderLog, setRenderLog] = useState<string[]>(['🟢 Component เริ่มต้น'])
 
@@ -18,16 +69,19 @@ export default function L01_WhatIsReact() {
       <Section title="React คืออะไร?">
         <p>
           <strong>React</strong> คือ <strong>JavaScript Library</strong> (ไม่ใช่ Framework!) ที่ Facebook สร้างขึ้นในปี 2013
-          เอาไว้สำหรับสร้าง <strong>User Interface (UI)</strong> หรือ หน้าเว็บที่ผู้ใช้เห็นและโต้ตอบด้วย
+          เอาไว้สำหรับสร้าง <strong>User Interface (UI)</strong> หรือหน้าเว็บที่ผู้ใช้เห็นและโต้ตอบด้วย
         </p>
-        <Callout type="definition" title="Library vs Framework">
-          <strong>Library</strong> = เครื่องมือที่เราเรียกใช้เอง เราควบคุม flow <br/>
-          <strong>Framework</strong> = โครงสร้างที่ควบคุม flow เอง มันเรียกโค้ดเรา <br/>
-          React เป็น Library → เราเลือกใช้เมื่อไหร่ก็ได้ ไม่ได้บังคับ structure
+        <Callout type="definition" title="Library vs Framework — ต่างกันยังไง?">
+          <strong>Library</strong> = เครื่องมือที่เราเรียกใช้เอง เราควบคุม flow<br />
+          <code>myCode → calls → React</code><br /><br />
+          <strong>Framework</strong> = โครงสร้างที่ควบคุม flow เอง มันเรียกโค้ดเรา<br />
+          <code>Angular → calls → myCode</code><br /><br />
+          React เป็น Library → เราเลือกใช้เมื่อไหร่ก็ได้ ไม่ได้บังคับ structure ทั้งหมด
+          ดังนั้น React จึงจับคู่กับ library อื่นๆ ได้ง่าย เช่น React Router, Axios, Zustand
         </Callout>
         <p>
           ก่อน React นักพัฒนาต้องจัดการ DOM ด้วยมือผ่าน <code>document.getElementById</code>,
-          <code>innerHTML</code> ซึ่งยุ่งยากมากเมื่อ UI ซับซ้อนขึ้น React แก้ปัญหานี้ด้วยแนวคิด
+          <code>innerHTML</code> ซึ่งยุ่งยากมากเมื่อ UI ซับซ้อนขึ้น React แก้ปัญหานี้ด้วย
           <strong> Component</strong> และ <strong>Virtual DOM</strong>
         </p>
       </Section>
@@ -49,6 +103,70 @@ export default function L01_WhatIsReact() {
             </div>
           ))}
         </div>
+      </Section>
+
+      <Section title="🔬 กายวิภาค React Component แรก — ทุก line มีความหมาย">
+        <p>มาดู Component ที่ง่ายที่สุดแล้วแยกแต่ละส่วนให้เข้าใจ:</p>
+        <CodeBlock
+          language="tsx"
+          filename="src/components/Greeting.tsx"
+          code={`// ① import — นำ React เข้ามาใช้ (ใน React 17+ ไม่ต้อง import React แล้ว)
+import { useState } from 'react'
+
+// ② Function Component — ชื่อต้องขึ้นต้นด้วยตัวพิมพ์ใหญ่
+//    รับ props เป็น parameter (อธิบายใน Lesson 5)
+function Greeting({ name }: { name: string }) {
+
+  // ③ Hook — useState เก็บค่าที่ต้องการให้ UI อัพเดตเมื่อเปลี่ยน
+  const [liked, setLiked] = useState(false)
+
+  // ④ Return JSX — คือ UI ที่ต้องการแสดง
+  //    ต้องมี root element เดียว (ใช้ <> </> ถ้าไม่อยากเพิ่ม div)
+  return (
+    <div>
+      {/* ⑤ Expression {} — แทรก JavaScript ใน JSX */}
+      <p>สวัสดี {name}!</p>
+
+      {/* ⑥ Event Handler — onClick รับ function */}
+      <button onClick={() => setLiked(!liked)}>
+        {liked ? '❤️ ถูกใจแล้ว' : '🤍 ถูกใจ'}
+      </button>
+    </div>
+  )
+}
+
+// ⑦ Export — ส่ง component ออกให้ไฟล์อื่น import ได้
+export default Greeting`}
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+          {[
+            { num: '①', title: 'import', detail: 'นำ Hook หรือ library เข้ามาใช้ ต้องอยู่บนสุดของไฟล์เสมอ' },
+            { num: '②', title: 'Function Component', detail: 'function ปกติที่ return JSX — ชื่อต้องขึ้นต้นด้วยตัวใหญ่' },
+            { num: '③', title: 'useState Hook', detail: 'เก็บค่าที่ต้องการให้ UI อัพเดตเมื่อเปลี่ยน' },
+            { num: '④', title: 'return JSX', detail: 'บอกว่า Component นี้จะแสดง UI แบบไหน' },
+            { num: '⑤', title: '{} Expression', detail: 'แทรก JavaScript expression ใดๆ ลงใน JSX' },
+            { num: '⑥', title: 'Event Handler', detail: 'function ที่ทำงานเมื่อ user โต้ตอบ' },
+            { num: '⑦', title: 'export default', detail: 'ส่ง component ออกให้ไฟล์อื่น import ได้' },
+          ].map((item) => (
+            <div key={item.num} className="flex gap-2 p-2 bg-indigo-50 rounded-lg border border-indigo-100">
+              <span className="text-indigo-600 font-bold text-sm w-6 flex-shrink-0">{item.num}</span>
+              <div>
+                <div className="font-semibold text-indigo-800 text-xs">{item.title}</div>
+                <div className="text-indigo-600 text-xs">{item.detail}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <Callout type="warning" title="ถ้าลืม export default จะเกิดอะไร?">
+          ไฟล์อื่นจะ import ไม่ได้ → ได้ <code>undefined</code> มาแทน → component ไม่แสดงผล
+          หรือ error <code>Element type is invalid</code>
+        </Callout>
+        <Callout type="warning" title="ถ้าตั้งชื่อ component ด้วยตัวเล็ก จะเกิดอะไร?">
+          React จะคิดว่าเป็น HTML element ธรรมดา เช่น <code>&lt;greeting&gt;</code> ไม่ใช่ Component
+          ทำให้ไม่ render อะไรออกมา หรือ error <code>Unknown prop</code>
+        </Callout>
       </Section>
 
       <Section title="Virtual DOM คืออะไร?">
@@ -117,13 +235,41 @@ function Counter() {
 }`}
         />
         <Callout type="tip" title="จำง่ายๆ">
-          Declarative = "ฉันอยากได้กาแฟ" (บอกผลลัพธ์)<br/>
+          Declarative = "ฉันอยากได้กาแฟ" (บอกผลลัพธ์)<br />
           Imperative = "ต้มน้ำ → ใส่กาแฟ → เติมน้ำตาล → คน" (บอกทุก step)
         </Callout>
       </Section>
 
+      <Section title="🔬 กายวิภาค main.tsx — จุดเริ่มต้นของทุกอย่าง">
+        <p>ไฟล์ <code>main.tsx</code> คือจุดเริ่มต้น ที่ React "เข้าไปควบคุม" หน้าเว็บ</p>
+        <CodeBlock
+          language="tsx"
+          filename="src/main.tsx"
+          code={`// ① import createRoot จาก react-dom/client
+import { createRoot } from 'react-dom/client'
+
+// ② import global CSS
+import './index.css'
+
+// ③ import App component (root component)
+import App from './App'
+
+// ④ หา <div id="root"> ใน index.html
+const rootElement = document.getElementById('root')!
+//                                                 ↑ ! บอก TypeScript ว่า "ไม่ใช่ null แน่นอน"
+
+// ⑤ สร้าง React root และ render App เข้าไป
+createRoot(rootElement).render(<App />)
+
+// ผลลัพธ์: React ควบคุมทุกอย่างภายใน <div id="root"> ใน index.html`}
+        />
+        <Callout type="info" title="index.html มีอะไร?">
+          <code>{`<div id="root"></div>`}</code> — div เปล่าๆ ที่ React จะ inject UI เข้าไป
+          ทุก component ที่เราเขียนจะแสดงผลภายใน div นี้ทั้งหมด
+        </Callout>
+      </Section>
+
       <Section title="Demo: เห็น Re-render จริงๆ">
-        <p>กดปุ่มแล้วดูว่า React re-render component เมื่อ state เปลี่ยน</p>
         <DemoBox title="Virtual DOM Demo — กด + แล้วดู Log">
           <div className="flex gap-6 items-start">
             <div className="text-center">
@@ -153,25 +299,22 @@ function Counter() {
           language="text"
           filename="Project Structure"
           code={`my-app/
-├── public/           ← ไฟล์ static (รูป, favicon)
+├── public/           ← ไฟล์ static (รูป, favicon) — เข้าถึงได้จาก URL โดยตรง
 ├── src/              ← โค้ดทั้งหมดอยู่ที่นี่
-│   ├── components/   ← Component ที่ใช้ซ้ำได้
+│   ├── components/   ← Component ที่ใช้ซ้ำได้ (Button, Card, Modal)
 │   ├── pages/        ← หน้าต่างๆ (ถ้ามี routing)
-│   ├── hooks/        ← Custom hooks
-│   ├── App.tsx       ← Root component
-│   ├── main.tsx      ← Entry point (render App เข้า HTML)
+│   ├── hooks/        ← Custom hooks (useAuth, useFetch)
+│   ├── App.tsx       ← Root component — ทุกอย่างเริ่มจากที่นี่
+│   ├── main.tsx      ← Entry point — render App เข้า HTML
 │   └── index.css     ← Global CSS
 ├── index.html        ← HTML shell มี <div id="root">
 ├── package.json      ← Dependencies และ scripts
 ├── vite.config.ts    ← Vite bundler config
 └── tsconfig.json     ← TypeScript config`}
         />
-        <Callout type="info" title="main.tsx ทำอะไร?">
-          <code>createRoot(document.getElementById('root')!).render(&lt;App /&gt;)</code> คือการเอา
-          App component ไป "render" ลงใน <code>&lt;div id="root"&gt;</code> ใน index.html
-          ทำให้ React ควบคุมทุกอย่างใน div นั้น
-        </Callout>
       </Section>
+
+      <Exercise lessonId="what-is-react" questions={questions} onPass={onPass} />
     </div>
   )
 }

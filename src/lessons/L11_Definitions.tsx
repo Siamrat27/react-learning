@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Section from '../components/Section'
 import Callout from '../components/Callout'
+import Exercise, { ExQuestion } from '../components/Exercise'
 
 interface TermDef {
   term: string
@@ -177,7 +178,57 @@ const glossary: TermDef[] = [
 
 const categories = ['ทั้งหมด', ...Array.from(new Set(glossary.map((g) => g.category)))]
 
-export default function L11_Definitions() {
+const questions: ExQuestion[] = [
+  {
+    type: 'choice',
+    question: 'Virtual DOM คืออะไร?',
+    choices: [
+      'DOM ที่สร้างด้วย VR technology',
+      'สำเนา DOM ใน JavaScript memory ที่ React ใช้เปรียบเทียบก่อนอัพเดต Real DOM',
+      'DOM ที่โหลดเร็วกว่า Real DOM',
+      'DOM ที่ใช้ใน server-side rendering เท่านั้น',
+    ],
+    correct: 1,
+    explanation:
+      'Virtual DOM คือ JavaScript object ที่แทน DOM tree React เปรียบเทียบ Virtual DOM ใหม่กับเก่า (Diffing/Reconciliation) เพื่อหาส่วนที่เปลี่ยนและอัพเดต Real DOM เฉพาะส่วนนั้น ทำให้เร็วกว่าการอัพเดต DOM ทั้งหมด',
+  },
+  {
+    type: 'choice',
+    question: '"Prop Drilling" คืออะไรและแก้ได้ด้วยอะไร?',
+    choices: [
+      'การส่ง props หลายตัวพร้อมกัน แก้ด้วยการรวม props เป็น object เดียว',
+      'การส่ง props ผ่าน component หลายชั้นที่ไม่ได้ใช้ แก้ด้วย Context หรือ state management',
+      'การใช้ props ผิด type แก้ด้วย TypeScript',
+      'การส่ง callback props แก้ด้วย useState',
+    ],
+    correct: 1,
+    explanation:
+      'Prop Drilling = ส่ง props ผ่าน component กลางๆ ที่ไม่ได้ใช้ เพื่อส่งต่อให้ component ลึกๆ ทำให้โค้ดยุ่ง แก้ด้วย React Context (useContext) หรือ state management library เช่น Zustand, Redux',
+  },
+  {
+    type: 'fill',
+    question: 'การที่ React เปรียบเทียบ Virtual DOM ใหม่กับเก่าเพื่อหาส่วนที่ต้องอัพเดตเรียกว่า ___',
+    hint: 'กระบวนการ "ประนีประนอม" ระหว่าง DOM เก่าและใหม่',
+    correct: ['Reconciliation', 'reconciliation', 'Diffing', 'diffing'],
+    explanation:
+      'Reconciliation คือกระบวนการที่ React เปรียบเทียบ (Diff) Virtual DOM ใหม่กับเก่า เพื่อหาส่วนที่ต้องการอัพเดต แล้วอัพเดต Real DOM เฉพาะส่วนนั้น ทำให้ performance ดีกว่าการ re-render ทั้งหมด',
+  },
+  {
+    type: 'choice',
+    question: 'SPA (Single Page Application) ต่างจากเว็บปกติอย่างไร?',
+    choices: [
+      'SPA มีแค่หน้าเดียว ทำอะไรไม่ได้มาก',
+      'SPA โหลด HTML ครั้งเดียว JavaScript เปลี่ยน view โดยไม่ reload ทำให้ UX เหมือนแอป',
+      'SPA เร็วกว่าเว็บปกติเสมอในทุกกรณี',
+      'SPA ไม่ต้องการ server',
+    ],
+    correct: 1,
+    explanation:
+      'SPA โหลด HTML/JS ครั้งแรกครั้งเดียว เมื่อเปลี่ยน "หน้า" JavaScript อัพเดต DOM โดยไม่ reload ทำให้รู้สึกเหมือนแอปมือถือ ข้อเสีย: SEO ทำได้ยากกว่าและ initial load ช้ากว่า (แก้ด้วย SSR/Next.js)',
+  },
+]
+
+export default function L11_Definitions({ onPass }: { onPass?: () => void }) {
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState('ทั้งหมด')
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -286,6 +337,8 @@ export default function L11_Definitions() {
           )}
         </div>
       </Section>
+
+      <Exercise lessonId="definitions" questions={questions} onPass={onPass} />
     </div>
   )
 }

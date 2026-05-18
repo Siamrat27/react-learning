@@ -15,7 +15,7 @@ import L10 from './lessons/L10_PromiseAll'
 import L11 from './lessons/L11_Definitions'
 import L12 from './lessons/L12_Tailwind'
 
-const lessonComponents: Record<string, React.ComponentType> = {
+const lessonComponents: Record<string, React.ComponentType<{ onPass?: () => void }>> = {
   'what-is-react': L01,
   'components-jsx': L02,
   typescript: L03,
@@ -197,7 +197,7 @@ export default function App() {
         />
 
         <div className="max-w-3xl mx-auto px-8 py-8">
-          {LessonComponent ? <LessonComponent /> : (
+          {LessonComponent ? <LessonComponent onPass={() => setCompleted((prev) => new Set([...prev, activeLesson]))} /> : (
             <p className="text-slate-400">ไม่พบบทเรียนนี้</p>
           )}
 

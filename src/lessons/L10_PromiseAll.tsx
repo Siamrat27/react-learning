@@ -3,6 +3,7 @@ import CodeBlock from '../components/CodeBlock'
 import Callout from '../components/Callout'
 import DemoBox from '../components/DemoBox'
 import Section from '../components/Section'
+import Exercise, { ExQuestion } from '../components/Exercise'
 
 interface ApiResult {
   label: string
@@ -11,7 +12,66 @@ interface ApiResult {
   time?: number
 }
 
-export default function L10_PromiseAll() {
+const questions: ExQuestion[] = [
+  {
+    type: 'choice',
+    question: 'Promise.all vs Promise.allSettled ต่างกันอย่างไร?',
+    choices: [
+      'Promise.all เร็วกว่า Promise.allSettled เสมอ',
+      'Promise.all reject ทันทีถ้าตัวใดตัวหนึ่ง fail, Promise.allSettled รอจนทุกตัวจบและให้ผลทั้งหมด',
+      'Promise.all ทำงาน parallel, Promise.allSettled ทำงาน sequential',
+      'ไม่ต่างกัน แค่ชื่อต่างกัน',
+    ],
+    correct: 1,
+    explanation:
+      'Promise.all: ถ้าตัวใดตัวหนึ่ง reject → ทั้ง Promise.all reject ทันที (fail-fast) ใช้เมื่อต้องการทุกผลลัพธ์และถ้าบางอันล้มเหลวจะ abort ทั้งหมด / Promise.allSettled: รอจนทุกตัวจบ (สำเร็จหรือล้มเหลวก็ได้) แล้วให้ผลทั้งหมด ใช้เมื่อต้องการผลทุกอัน',
+  },
+  {
+    type: 'fill',
+    question: 'เติมให้ครบ: `const [user, posts] = await Promise.___([ fetchUser(), fetchPosts() ])` — method ที่รัน parallel และทุกตัวต้องสำเร็จ',
+    hint: 'คำว่า "ทั้งหมด"',
+    correct: ['all', 'Promise.all'],
+    explanation:
+      '`Promise.all([...])` รัน promise ทุกตัวพร้อมกัน และ return array ของผลลัพธ์ตามลำดับที่ส่งไป ถ้าตัวใดตัวหนึ่ง reject → ทั้งหมด reject ทันที',
+  },
+  {
+    type: 'choice',
+    question: 'ทำไม Parallel requests ถึงเร็วกว่า Sequential?',
+    code: `// Sequential
+const user = await fetchUser()   // 200ms
+const posts = await fetchPosts() // 300ms
+// รวม: 500ms
+
+// Parallel
+const [user, posts] = await Promise.all([fetchUser(), fetchPosts()])
+// รวม: 300ms`,
+    codeLanguage: 'typescript',
+    choices: [
+      'เพราะ Promise.all เร็วกว่า await ปกติ',
+      'เพราะ request ทั้งสองรันพร้อมกัน รวมเวลาเท่ากับตัวที่ช้าที่สุด ไม่ใช่ผลรวม',
+      'เพราะ server ประมวลผลเร็วขึ้นเมื่อใช้ Promise.all',
+      'ไม่มีความแตกต่าง แค่ syntax ต่างกัน',
+    ],
+    correct: 1,
+    explanation:
+      'Sequential: request B เริ่มหลัง A เสร็จ → เวลารวม = A + B = 500ms / Parallel: A และ B เริ่มพร้อมกัน → เวลารวม = max(A, B) = 300ms ยิ่ง request เยอะ ยิ่งประหยัดเวลาได้มาก',
+  },
+  {
+    type: 'choice',
+    question: 'Promise.race ใช้สำหรับอะไร?',
+    choices: [
+      'รัน promise ให้เร็วที่สุด',
+      'เปรียบเทียบผลลัพธ์ของ promise',
+      'รอแค่อันที่เสร็จก่อน (resolve หรือ reject) ใช้ทำ timeout pattern',
+      'เรียง promise ตามลำดับ',
+    ],
+    correct: 2,
+    explanation:
+      '`Promise.race([promise, timeout])` resolve/reject ตาม promise แรกที่จบ ใช้ทำ timeout pattern: ถ้า API ช้าเกิน N วินาที ให้ reject ด้วย "Timeout!" แทนที่จะรอตลอดไป',
+  },
+]
+
+export default function L10_PromiseAll({ onPass }: { onPass?: () => void }) {
   const [results, setResults] = useState<ApiResult[]>([])
   const [running, setRunning] = useState(false)
   const [totalTime, setTotalTime] = useState<number | null>(null)
@@ -123,6 +183,44 @@ async function loadPageParallel() {
   // รวม: max(200, 300, 150) = 300ms ← เร็วกว่า 2x!
 }`}
         />
+      </Section>
+
+      <Section title="🔬 Anatomy ของ Promise.all">
+        <CodeBlock
+          language="typescript"
+          code={`// ① Promise.all รับ array ของ Promise
+const results = await Promise.all([
+  //               ↑ array ของ promise หรือ value ใดก็ได้
+  fetchUser(1),    // ② promise แรก — รันทันที
+  fetchPosts(1),   // ② promise ที่สอง — รันพร้อมกัน
+  fetchTodos(1),   // ② promise ที่สาม — รันพร้อมกัน
+])
+
+// ③ results คือ array ของผลลัพธ์ตามลำดับที่ส่งไป
+const [user, posts, todos] = results
+// ไม่ใช่ตามลำดับที่เสร็จ แต่ตามลำดับที่ใส่ใน array!
+
+// ④ TypeScript version — กำหนด type ชัดเจน
+const [userRes, postsRes] = await Promise.all([
+  axios.get<User>('/api/users/1'),    // AxiosResponse<User>
+  axios.get<Post[]>('/api/posts'),    // AxiosResponse<Post[]>
+])
+const user = userRes.data    // User
+const posts = postsRes.data  // Post[]
+
+// ⑤ ถ้า promise ใดๆ reject → Promise.all reject ทันที
+try {
+  const results = await Promise.all([ok1, ok2, willFail])
+  // ถ้า willFail reject → เข้า catch ทันที
+  // ok1, ok2 ยังรันอยู่แต่เราไม่ได้ผลลัพธ์
+} catch (err) {
+  console.error('อย่างน้อยหนึ่งอันล้มเหลว:', err)
+}`}
+        />
+        <Callout type="warning" title="เมื่อไหรจึงควรใช้ Promise.all?">
+          ใช้เมื่อ: ต้องการ <strong>ทุก</strong> ผลลัพธ์ และถ้าบางอันล้มเหลวจะไม่แสดงผลเลย
+          ถ้าต้องการแสดงผลที่สำเร็จแม้บางอันจะล้มเหลว → ใช้ <strong>Promise.allSettled</strong> แทน
+        </Callout>
       </Section>
 
       <Section title="Promise.all — ทั้งหมดต้องสำเร็จ">
@@ -269,6 +367,8 @@ const fastest = await Promise.any([
           </div>
         </DemoBox>
       </Section>
+
+      <Exercise lessonId="promiseall" questions={questions} onPass={onPass} />
     </div>
   )
 }

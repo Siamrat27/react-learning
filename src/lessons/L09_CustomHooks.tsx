@@ -3,6 +3,7 @@ import CodeBlock from '../components/CodeBlock'
 import Callout from '../components/Callout'
 import DemoBox from '../components/DemoBox'
 import Section from '../components/Section'
+import Exercise, { ExQuestion } from '../components/Exercise'
 
 // ---- Custom Hooks ที่ใช้ใน Demo ----
 
@@ -56,7 +57,57 @@ function useDebounce<T>(value: T, delay: number): T {
 
 interface Post { id: number; title: string; userId: number }
 
-export default function L09_CustomHooks() {
+const questions: ExQuestion[] = [
+  {
+    type: 'choice',
+    question: 'Custom Hook ต้องขึ้นต้นด้วยอะไร?',
+    choices: [
+      'hook',
+      'use (เช่น useFetch, useLocalStorage)',
+      'custom',
+      'Hook (ตัวพิมพ์ใหญ่)',
+    ],
+    correct: 1,
+    explanation:
+      'Custom Hook ต้องชื่อขึ้นต้นด้วย `use` เสมอ (เช่น useFetch, useDebounce, useLocalStorage) เพราะ React ใช้ rule นี้ตรวจหา hook และ eslint-plugin-react-hooks จะ warn ถ้าไม่ขึ้นต้นด้วย use',
+  },
+  {
+    type: 'choice',
+    question: 'Rules of Hooks กำหนดว่าอะไร?',
+    choices: [
+      'ใช้ hook ได้แค่ใน class component',
+      'เรียก hook ใน if/else หรือ loop ได้ถ้าจำเป็น',
+      'ใช้ hook ได้แค่ใน function component และ custom hook และต้องเรียกที่ top level เสมอ',
+      'hook ต้องการ TypeScript เสมอ',
+    ],
+    correct: 2,
+    explanation:
+      'Rules of Hooks: 1) ใช้ hook ได้แค่ใน function component และ custom hook 2) เรียก hook ที่ top level เสมอ ห้ามใน if/loop/function ซ้อน เพราะ React ต้องรู้ลำดับ hook เดิมทุก render ถ้าลำดับเปลี่ยน → state ผิด',
+  },
+  {
+    type: 'fill',
+    question: 'เติมให้ครบ: `const { data, loading, error } = use___(url)` — custom hook สำหรับดึงข้อมูลจาก API',
+    hint: 'ชื่อ hook ที่ใช้ fetch data',
+    correct: ['useFetch', 'Fetch'],
+    explanation:
+      'useFetch เป็น custom hook ที่รับ URL แล้วจัดการ loading/error/data ให้ครบ Component ที่ใช้ไม่ต้องเขียน useEffect + useState ซ้ำๆ แค่ `const { data, loading, error } = useFetch(url)` ก็พอ',
+  },
+  {
+    type: 'choice',
+    question: 'useDebounce มีประโยชน์อย่างไรกับ search input?',
+    choices: [
+      'ทำให้ input พิมพ์เร็วขึ้น',
+      'บังคับให้ user พิมพ์ครบก่อนค้นหา',
+      'หน่วงเวลาก่อน API call เพื่อไม่ให้เรียก API ทุกตัวอักษรที่พิมพ์',
+      'เก็บ search history',
+    ],
+    correct: 2,
+    explanation:
+      'Debounce หน่วงเวลา X ms ก่อนทำงาน ถ้า value เปลี่ยนก่อนหมดเวลา จะ reset timer ใหม่ ทำให้ API ถูกเรียกเมื่อ user หยุดพิมพ์เท่านั้น (ไม่เรียกทุก keystroke) ประหยัด bandwidth และลดภาระ server',
+  },
+]
+
+export default function L09_CustomHooks({ onPass }: { onPass?: () => void }) {
   const [postId, setPostId] = useState(1)
   const url = `https://jsonplaceholder.typicode.com/posts/${postId}`
   const { data: post, loading, error } = useFetch<Post>(url)
@@ -98,6 +149,67 @@ function GoodComponent({ isAdmin }: { isAdmin: boolean }) {
   }, [isAdmin])
 }`}
         />
+      </Section>
+
+      <Section title="🔬 Anatomy ของ Custom Hook: useFetch">
+        <CodeBlock
+          language="tsx"
+          code={`// ① ชื่อต้องขึ้นต้นด้วย 'use'
+// ② Generic <T> ทำให้ใช้ได้กับทุก type ของ data
+function useFetch<T>(url: string) {    // ③ รับ url เป็น parameter
+
+  // ④ state ที่ hook จัดการภายใน
+  const [data, setData] = useState<T | null>(null)   // T | null = ยังไม่มีข้อมูล
+  const [loading, setLoading] = useState(true)        // เริ่มต้น loading = true
+  const [error, setError] = useState<string | null>(null)
+
+  // ⑤ side effect — fetch เมื่อ url เปลี่ยน
+  useEffect(() => {
+    setLoading(true)
+    setError(null)      // reset error ก่อน fetch ใหม่
+
+    fetch(url)
+      .then((r) => {
+        if (!r.ok) throw new Error(\`HTTP \${r.status}\`)
+        return r.json()
+      })
+      .then((d) => {
+        setData(d)         // ⑥ เก็บ data
+        setLoading(false)
+      })
+      .catch((e: Error) => {
+        setError(e.message)  // ⑦ เก็บ error message
+        setLoading(false)
+      })
+  }, [url])  // ⑧ refetch เมื่อ url เปลี่ยน
+
+  // ⑨ return ค่าที่ component ต้องการ
+  return { data, loading, error }
+}
+
+// ⑩ ใช้งานใน component — clean และ reusable!
+function UserProfile({ id }: { id: number }) {
+  // ① ใช้ Generic กำหนด type ของ data ที่ expect
+  const { data: user, loading, error } = useFetch<User>(\`/api/users/\${id}\`)
+  //           ↑ rename data → user ด้วย alias
+
+  if (loading) return <p>Loading...</p>
+  if (error) return <p>Error: {error}</p>
+  return <div>{user?.name}</div>
+}`}
+        />
+        <div className="grid grid-cols-1 gap-2 mt-3">
+          {[
+            { step: 'ประโยชน์ที่ 1', desc: 'Reuse — เขียน fetch logic ครั้งเดียว ใช้ได้ทุก component โดยไม่ต้องเขียนซ้ำ' },
+            { step: 'ประโยชน์ที่ 2', desc: 'Separation of Concerns — component ไม่ต้องรู้เรื่อง fetch/loading/error จัดการเอง แค่รับผลลัพธ์' },
+            { step: 'ประโยชน์ที่ 3', desc: 'Testable — test hook แยกได้โดยไม่ต้องเกี่ยวกับ UI' },
+          ].map((item) => (
+            <div key={item.step} className="flex gap-3 p-2 bg-blue-50 rounded-lg border border-blue-100">
+              <span className="text-blue-600 font-semibold text-xs w-24 flex-shrink-0">{item.step}</span>
+              <p className="text-blue-700 text-xs">{item.desc}</p>
+            </div>
+          ))}
+        </div>
       </Section>
 
       <Section title="สร้าง Custom Hook: useFetch">
@@ -209,6 +321,7 @@ function useDebounce<T>(value: T, delay: number): T {
     }, delay)
 
     // cleanup: ยกเลิก timer เก่าทุกครั้งที่ value เปลี่ยน
+    // → ถ้า value เปลี่ยนก่อน delay หมด → timer ถูก reset
     return () => clearTimeout(timer)
   }, [value, delay])
 
@@ -230,6 +343,10 @@ function SearchBox() {
   return <input value={query} onChange={e => setQuery(e.target.value)} />
 }`}
         />
+        <Callout type="tip" title="ถ้าไม่ debounce จะเกิดอะไร?">
+          User พิมพ์ "React" → 5 ตัวอักษร → 5 API calls ("R", "Re", "Rea", "Reac", "React")
+          ด้วย debounce 500ms → API call เดียวเมื่อหยุดพิมพ์ ลด server load ได้มาก
+        </Callout>
       </Section>
 
       <Section title="Demo: ใช้ Custom Hooks จริงๆ">
@@ -294,6 +411,8 @@ function SearchBox() {
           </div>
         </DemoBox>
       </Section>
+
+      <Exercise lessonId="customhooks" questions={questions} onPass={onPass} />
     </div>
   )
 }

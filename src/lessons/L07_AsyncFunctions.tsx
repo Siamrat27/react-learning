@@ -3,10 +3,65 @@ import CodeBlock from '../components/CodeBlock'
 import Callout from '../components/Callout'
 import DemoBox from '../components/DemoBox'
 import Section from '../components/Section'
+import Exercise, { ExQuestion } from '../components/Exercise'
 
 type Status = 'idle' | 'loading' | 'success' | 'error'
 
-export default function L07_AsyncFunctions() {
+const questions: ExQuestion[] = [
+  {
+    type: 'choice',
+    question: 'ข้อใดต่อไปนี้ถูกต้องเกี่ยวกับ async/await?',
+    choices: [
+      'async function return ค่าปกติ เช่น string หรือ number โดยตรง',
+      'await ใช้ได้ทุกที่ ไม่จำเป็นต้องอยู่ใน async function',
+      'async function return Promise เสมอ และ await ใช้ได้แค่ใน async function',
+      'async/await และ .then() ทำงานต่างกันโดยสิ้นเชิง ผลลัพธ์ต่างกัน',
+    ],
+    correct: 2,
+    explanation:
+      'async function return Promise เสมอ (แม้จะ return ค่าปกติ React จะ wrap เป็น Promise) และ await ใช้ได้แค่ใน async function เท่านั้น ถ้าใช้นอก async จะ SyntaxError',
+  },
+  {
+    type: 'fill',
+    question: 'เติมให้ครบ: `const [users, posts] = await Promise.___([ fetchUsers(), fetchPosts() ])` — method ที่รันทั้งคู่พร้อมกันและต้องสำเร็จทั้งคู่',
+    hint: 'method ที่ "ทั้งหมด" ต้องสำเร็จ',
+    correct: ['all', 'Promise.all'],
+    explanation:
+      '`Promise.all([...])` รัน promise ทุกตัวพร้อมกัน (parallel) และ return array ของผลลัพธ์เมื่อทุกตัวสำเร็จ ถ้าตัวใดตัวหนึ่ง reject → ทั้งหมด reject ทันที',
+  },
+  {
+    type: 'choice',
+    question: 'ใน try/catch/finally อะไรรันเสมอไม่ว่าจะสำเร็จหรือ error?',
+    choices: [
+      'try block',
+      'catch block',
+      'finally block',
+      'ทั้ง try และ catch',
+    ],
+    correct: 2,
+    explanation:
+      'finally block รันเสมอ ไม่ว่า try จะสำเร็จหรือ catch จะจัดการ error ใช้สำหรับ cleanup เช่น `setLoading(false)` ที่ต้องทำทั้งกรณีสำเร็จและล้มเหลว',
+  },
+  {
+    type: 'choice',
+    question: 'ถ้าต้องการใช้ async/await ใน useEffect ต้องทำยังไง?',
+    code: `useEffect(() => {
+  // ❓ ทำ async ยังไงตรงนี้?
+}, [])`,
+    codeLanguage: 'tsx',
+    choices: [
+      'เปลี่ยน arrow function ของ useEffect เป็น async โดยตรง: `useEffect(async () => { ... })`',
+      'สร้าง async function ข้างในแล้วเรียกทันที: `const run = async () => {...}; run()`',
+      'ใช้ .then() แทน await ในทุกกรณี',
+      'ไม่สามารถใช้ async ใน useEffect ได้',
+    ],
+    correct: 1,
+    explanation:
+      'useEffect callback ไม่ควรเป็น async โดยตรง (เพราะ async function return Promise และ useEffect expect cleanup function หรือ void) วิธีที่ถูกคือสร้าง async function ข้างในแล้วเรียกมัน: `const run = async () => { ... }; run()`',
+  },
+]
+
+export default function L07_AsyncFunctions({ onPass }: { onPass?: () => void }) {
   const [userId, setUserId] = useState(1)
   const [status, setStatus] = useState<Status>('idle')
   const [result, setResult] = useState<string>('')
@@ -128,6 +183,48 @@ fetch('/api/users')
         />
       </Section>
 
+      <Section title="🔬 Anatomy ของ Async/Await">
+        <CodeBlock
+          language="typescript"
+          code={`async function getUserAsync(id: number) {   // ① async keyword → function นี้ return Promise เสมอ
+  try {                                        // ② try = โค้ดที่อาจ throw error
+
+    const res = await fetch(\`/api/users/\${id}\`) // ③ await = หยุดรอ Promise นี้ให้สำเร็จ
+    //                  ↑ ถ้าไม่มี await จะได้ Promise object ไม่ใช่ค่าจริง
+
+    if (!res.ok) throw new Error(\`HTTP \${res.status}\`) // ④ ตรวจสอบ HTTP status
+
+    const user = await res.json()              // ⑤ await อีกครั้ง — .json() ก็ return Promise
+
+    return user                                // ⑥ return value → caller จะได้ user จาก await
+
+  } catch (err) {                             // ⑦ catch = จัดการ error ทุกประเภทที่ throw ข้างบน
+    console.error(err)                         // ⑧ log หรือจัดการ error
+    throw err                                  // ⑨ re-throw ให้ caller จัดการต่อ (optional)
+
+  } finally {                                 // ⑩ finally = รันเสมอ (cleanup)
+    setLoading(false)
+  }
+}
+
+// ⑪ เรียกใช้ — ต้อง await เพราะ return Promise
+const user = await getUserAsync(1)`}
+        />
+        <div className="grid grid-cols-1 gap-2 mt-3">
+          {[
+            { label: 'async', desc: 'ทำให้ function return Promise เสมอ ถ้า return "hello" จะได้ Promise<string> ที่ resolve เป็น "hello"' },
+            { label: 'await', desc: 'หยุดรอ Promise ให้ resolve แล้วดึงค่าออกมา — ใช้ได้แค่ใน async function เท่านั้น' },
+            { label: 'try/catch', desc: 'try = โค้ดที่อาจ fail, catch = จัดการ error เหมือน try/catch ปกติ แต่ catch ได้ทั้ง sync และ async error' },
+            { label: 'finally', desc: 'รันเสมอ ไม่ว่า try จะสำเร็จหรือ catch จะทำงาน เหมาะสำหรับ setLoading(false)' },
+          ].map((item) => (
+            <div key={item.label} className="flex gap-3 items-start p-2 bg-slate-50 rounded-lg border border-slate-200">
+              <code className="text-purple-700 font-bold text-sm w-16 flex-shrink-0">{item.label}</code>
+              <p className="text-slate-600 text-xs">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
+
       <Section title="Async/Await — เขียน Async แบบ Sync">
         <p>
           <code>async/await</code> คือ syntax sugar ที่ทำให้เขียน Promise ได้แบบ "ดูเหมือน" code ปกติ
@@ -215,6 +312,45 @@ async function getUserAsync(id: number) {
         </Callout>
       </Section>
 
+      <Section title="Async/Await ใน useEffect">
+        <CodeBlock
+          language="tsx"
+          code={`// ❌ ห้ามทำ — useEffect callback เป็น async โดยตรง
+useEffect(async () => {
+  const data = await fetchData()  // ดูเหมือนใช้ได้ แต่จะเกิด warning
+  // เพราะ async function return Promise
+  // แต่ useEffect expect cleanup function (ไม่ใช่ Promise)
+}, [])
+
+// ✅ วิธีที่ถูก — สร้าง async function ข้างใน
+useEffect(() => {
+  const fetchUser = async () => {    // ① สร้าง async function ข้างใน
+    setLoading(true)
+    try {
+      const res = await fetch('/api/user')
+      const data = await res.json()
+      setUser(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  fetchUser()    // ② เรียก async function ทันที
+  // ③ useEffect callback return void (ไม่ return Promise)
+}, [])
+
+// ✅ หรือ IIFE (Immediately Invoked)
+useEffect(() => {
+  (async () => {
+    const data = await fetchData()
+    setData(data)
+  })()
+}, [])`}
+        />
+      </Section>
+
       <Section title="Demo: Fetch ด้วย Async/Await + Error Handling">
         <DemoBox title="ลองเรียก API ด้วย async/await + try/catch">
           <div className="space-y-3">
@@ -270,6 +406,8 @@ async function getUserAsync(id: number) {
           </div>
         </DemoBox>
       </Section>
+
+      <Exercise lessonId="async" questions={questions} onPass={onPass} />
     </div>
   )
 }

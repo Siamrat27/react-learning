@@ -3,8 +3,63 @@ import CodeBlock from '../components/CodeBlock'
 import Callout from '../components/Callout'
 import DemoBox from '../components/DemoBox'
 import Section from '../components/Section'
+import Exercise, { ExQuestion } from '../components/Exercise'
 
-export default function L06_useEffect() {
+const questions: ExQuestion[] = [
+  {
+    type: 'choice',
+    question: 'Dependency array แบบ [] (empty array) หมายความว่าอะไร?',
+    choices: [
+      'รัน useEffect ทุกครั้งที่ component re-render',
+      'ไม่รัน useEffect เลย',
+      'รันแค่ครั้งเดียวตอน component mount (โหลดครั้งแรก)',
+      'รันเฉพาะตอน component unmount',
+    ],
+    correct: 2,
+    explanation:
+      '[] = "ไม่มี dependency ที่ต้องติดตาม" → รันครั้งเดียวตอน mount เหมาะสำหรับ initial data fetch หรือ setup ที่ต้องทำแค่ครั้งเดียว',
+  },
+  {
+    type: 'fill',
+    question: 'Cleanup function ใน useEffect คือ function ที่ ___ ออกมาจาก callback',
+    hint: 'คำที่ใช้ส่งค่ากลับออกจาก function',
+    correct: ['return', 'returns'],
+    explanation:
+      'useEffect cleanup คือ function ที่ return ออกมา: `useEffect(() => { ... return () => { cleanup here } }, [])` มันรันก่อน effect รันใหม่ หรือก่อน component unmount ป้องกัน memory leak',
+  },
+  {
+    type: 'choice',
+    question: 'ถ้าไม่ใส่ dependency array เลย useEffect จะทำงานยังไง?',
+    code: `useEffect(() => {
+  console.log('running...')
+})  // ← ไม่มี [] `,
+    codeLanguage: 'tsx',
+    choices: [
+      'รันแค่ครั้งเดียวตอนเริ่ม',
+      'ไม่รันเลย',
+      'รันทุกครั้งที่ component re-render — อันตราย อาจเกิด infinite loop',
+      'รันทุก 1 วินาที',
+    ],
+    correct: 2,
+    explanation:
+      'ไม่มี dependency array = รันทุก render ถ้าใน effect มีการ setState ก็จะ re-render → effect รันอีก → re-render อีก → infinite loop! หลีกเลี่ยงการไม่ใส่ dependency array',
+  },
+  {
+    type: 'choice',
+    question: 'Memory Leak ใน useEffect เกิดจากอะไร?',
+    choices: [
+      'ใช้ useState มากเกินไป',
+      'Component unmount แต่ยังมี timer/listener ทำงานอยู่และ setState',
+      'fetch ข้อมูลเยอะเกิน',
+      'ใช้ dependency array ผิด',
+    ],
+    correct: 1,
+    explanation:
+      'เมื่อ component unmount (หายจากหน้า) แต่ setInterval หรือ event listener ยังทำงานอยู่และเรียก setState → React warn และเกิด bug cleanup function (return () => clearInterval/removeEventListener) ป้องกันสิ่งนี้',
+  },
+]
+
+export default function L06_useEffect({ onPass }: { onPass?: () => void }) {
   const [seconds, setSeconds] = useState(0)
   const [isRunning, setIsRunning] = useState(false)
   const [windowWidth, setWindowWidth] = useState(window.innerWidth)
@@ -13,37 +68,27 @@ export default function L06_useEffect() {
   const [loading, setLoading] = useState(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Timer demo
   useEffect(() => {
     if (isRunning) {
-      intervalRef.current = setInterval(() => {
-        setSeconds((s) => s + 1)
-      }, 1000)
+      intervalRef.current = setInterval(() => setSeconds((s) => s + 1), 1000)
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current)
     }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-    }
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [isRunning])
 
-  // Window resize
   useEffect(() => {
     const handler = () => setWindowWidth(window.innerWidth)
     window.addEventListener('resize', handler)
     return () => window.removeEventListener('resize', handler)
   }, [])
 
-  // Fetch on postId change
   useEffect(() => {
     setLoading(true)
     setFetchedPost(null)
     fetch(`https://jsonplaceholder.typicode.com/posts/${postId}`)
       .then((r) => r.json())
-      .then((data) => {
-        setFetchedPost(data)
-        setLoading(false)
-      })
+      .then((data) => { setFetchedPost(data); setLoading(false) })
       .catch(() => setLoading(false))
   }, [postId])
 
@@ -69,69 +114,72 @@ export default function L06_useEffect() {
         </div>
       </Section>
 
-      <Section title="useEffect Syntax">
+      <Section title="🔬 Anatomy ของ useEffect — ทุก part">
         <CodeBlock
           language="tsx"
-          code={`useEffect(() => {
-  // 1. โค้ด side effect ที่ต้องการรัน
+          code={`useEffect(
+  () => {              // ← ① callback function (side effect ที่ต้องการรัน)
+    const timer = setInterval(() => {
+      setCount(c => c + 1)
+    }, 1000)
 
-  return () => {
-    // 2. Cleanup function (optional)
-    //    รันก่อน effect รันอีกครั้ง หรือก่อน component unmount
-  }
-}, [/* 3. dependency array */])`}
+    return () => {     // ← ② cleanup function (optional แต่สำคัญมาก)
+      clearInterval(timer)
+      //  └── รัน: ก่อน effect รันใหม่, หรือก่อน component unmount
+    }
+  },
+  [dependency]         // ← ③ dependency array — กำหนดเมื่อไหร่ effect ถึงรัน
+  //  ├── []         = รันแค่ครั้งแรก (mount)
+  //  ├── [id]       = รันเมื่อ id เปลี่ยน
+  //  ├── [a, b]     = รันเมื่อ a หรือ b เปลี่ยน
+  //  └── (ไม่ใส่)   = รันทุก render (ระวัง! infinite loop)
+)`}
         />
+      </Section>
 
-        <h3 className="font-bold text-slate-800 mt-6 mb-3">3 รูปแบบของ Dependency Array</h3>
-        <div className="space-y-3">
+      <Section title="3 รูปแบบของ Dependency Array">
+        <div className="space-y-4">
           {[
             {
-              label: '[] — Empty Array',
+              label: '[] — Empty: รันแค่ครั้งเดียวตอน mount',
               color: 'blue',
-              desc: 'รันแค่ครั้งเดียว ตอน Component mount (โหลดครั้งแรก)',
-              useCase: 'Fetch initial data, setup subscriptions',
+              when: 'Initial fetch, setup subscription, ดึงข้อมูลครั้งแรก',
               code: `useEffect(() => {
-  fetch('/api/data').then(...)
-}, [])  // รันครั้งเดียว`,
+  // รันแค่ครั้งเดียวตอน component โหลด
+  fetch('/api/config').then(setConfig)
+}, [])  // ← [] = "ไม่มีอะไรที่ต้องติดตาม"`,
             },
             {
-              label: '[dep1, dep2] — With Dependencies',
+              label: '[dep] — With Dependencies: รันเมื่อ dependency เปลี่ยน',
               color: 'green',
-              desc: 'รันทุกครั้งที่ dep1 หรือ dep2 เปลี่ยนค่า',
-              useCase: 'Fetch เมื่อ parameter เปลี่ยน, อัพเดต UI ตาม state',
+              when: 'Fetch ตาม parameter, sync state กับ external source',
               code: `useEffect(() => {
-  fetch(\`/api/posts/\${postId}\`).then(...)
-}, [postId])  // รันทุกครั้งที่ postId เปลี่ยน`,
+  // รันทุกครั้งที่ userId เปลี่ยน
+  fetch(\`/api/users/\${userId}\`).then(setUser)
+}, [userId])  // ← ติดตาม userId`,
             },
             {
-              label: 'ไม่มี Array',
+              label: 'ไม่มี Array — รันทุก render (อันตราย!)',
               color: 'red',
-              desc: 'รันทุก render (ใช้ระวัง! มักเกิด infinite loop)',
-              useCase: 'แทบไม่ได้ใช้ในทางปฏิบัติ',
+              when: 'แทบไม่มี use case ที่ดี มักเกิด infinite loop',
               code: `useEffect(() => {
-  console.log('รันทุก render!')
-})  // ไม่มี array — อันตราย!`,
+  // รันทุกครั้งที่ component re-render
+  setCount(count + 1)  // ← setState → re-render → effect รัน → loop!
+})  // ← ไม่มี array = อันตราย`,
             },
           ].map((item) => (
-            <div key={item.label} className={`border border-${item.color}-200 rounded-lg overflow-hidden`}>
+            <div key={item.label} className={`border border-${item.color}-200 rounded-xl overflow-hidden`}>
               <div className={`px-4 py-2 bg-${item.color}-50 border-b border-${item.color}-200`}>
                 <code className={`text-${item.color}-700 text-sm font-semibold`}>{item.label}</code>
+                <p className={`text-${item.color}-500 text-xs mt-0.5`}>ใช้เมื่อ: {item.when}</p>
               </div>
-              <div className="p-3">
-                <p className="text-slate-700 text-sm mb-1">{item.desc}</p>
-                <p className="text-slate-400 text-xs mb-2">ใช้สำหรับ: {item.useCase}</p>
-                <CodeBlock language="tsx" code={item.code} />
-              </div>
+              <CodeBlock language="tsx" code={item.code} />
             </div>
           ))}
         </div>
       </Section>
 
       <Section title="Cleanup Function — ป้องกัน Memory Leak">
-        <p>
-          Cleanup function คือ function ที่ return ออกมาจาก useEffect
-          มันรันเมื่อ component <strong>unmount</strong> หรือก่อน effect รันใหม่
-        </p>
         <CodeBlock
           language="tsx"
           code={`// ❌ ไม่มี cleanup — Memory Leak!
@@ -139,130 +187,103 @@ useEffect(() => {
   const interval = setInterval(() => {
     setCount(c => c + 1)
   }, 1000)
-  // ไม่ล้าง interval → interval ยังทำงานต่อแม้ component หายไป
+  // ✗ ไม่ล้าง interval → แม้ component หายไป interval ยังทำงาน
+  // → เรียก setCount บน component ที่ไม่มีแล้ว → React warn
 }, [])
 
-// ✅ มี cleanup
+// ✅ มี cleanup — ปลอดภัย
 useEffect(() => {
   const interval = setInterval(() => {
     setCount(c => c + 1)
   }, 1000)
 
-  return () => clearInterval(interval)  // cleanup!
+  return () => clearInterval(interval)  // ← cleanup
 }, [])
 
-// ตัวอย่าง Event Listener
+// ✅ Event Listener + cleanup
 useEffect(() => {
-  const handler = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') closeModal()
-  }
-  window.addEventListener('keydown', handler)
+  const handleResize = () => setWidth(window.innerWidth)
+  window.addEventListener('resize', handleResize)
 
-  return () => window.removeEventListener('keydown', handler)  // cleanup!
+  return () => window.removeEventListener('resize', handleResize)  // ← cleanup
 }, [])
 
-// ตัวอย่าง Fetch พร้อม Abort (ยกเลิก request เมื่อ unmount)
+// ✅ Fetch + Abort (ยกเลิก request เมื่อ unmount หรือ dependency เปลี่ยน)
 useEffect(() => {
   const controller = new AbortController()
   fetch('/api/data', { signal: controller.signal })
     .then(r => r.json())
     .then(setData)
-    .catch(() => {})  // AbortError จะถูก catch ที่นี่
+    .catch(() => {})  // AbortError จะ catch ที่นี่ (ไม่ต้อง setState)
 
-  return () => controller.abort()  // ยกเลิก request
+  return () => controller.abort()  // ← ยกเลิก request
 }, [id])`}
         />
-        <Callout type="warning" title="Memory Leak คืออะไร?">
-          เมื่อ component unmount (หายจากหน้า) แต่ยังมี timer หรือ event listener ทำงานอยู่
-          และพยายาม setState → React จะ warn และอาจเกิด bug แปลกๆ
-          Cleanup function แก้ปัญหานี้
+        <Callout type="warning" title="ถ้าไม่มี cleanup จะเกิดอะไร?">
+          React จะ warn: <em>"Can't perform a React state update on an unmounted component"</em>
+          และอาจเกิด bugs แปลกๆ เช่น state อัพเดตหลัง component หายไปแล้ว
+          ทำให้ app ช้าลงและหน่วยความจำล้น (memory leak) เมื่อเปิดใช้นาน
         </Callout>
       </Section>
 
-      <Section title="Common Patterns">
-        <CodeBlock
-          language="tsx"
-          code={`// Pattern 1: Fetch on mount
-function UserProfile({ userId }: { userId: number }) {
-  const [user, setUser] = useState<User | null>(null)
-
-  useEffect(() => {
-    fetch(\`/api/users/\${userId}\`)
-      .then(r => r.json())
-      .then(setUser)
-  }, [userId])  // refetch เมื่อ userId เปลี่ยน
-
-  return user ? <div>{user.name}</div> : <div>Loading...</div>
-}
-
-// Pattern 2: Document title
-useEffect(() => {
-  document.title = \`(\${unread}) Notifications\`
-  return () => { document.title = 'My App' }  // reset เมื่อ leave
-}, [unread])
-
-// Pattern 3: Sync with localStorage
-useEffect(() => {
-  localStorage.setItem('theme', theme)
-}, [theme])  // save เมื่อ theme เปลี่ยน`}
-        />
+      <Section title="useEffect vs Lifecycle Methods (สำหรับคนมาจาก Class Component)">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-slate-100">
+                <th className="text-left px-3 py-2 border border-slate-200">Class Component</th>
+                <th className="text-left px-3 py-2 border border-slate-200">useEffect equivalent</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ['componentDidMount', 'useEffect(() => { ... }, [])'],
+                ['componentDidUpdate', 'useEffect(() => { ... }, [dep])'],
+                ['componentWillUnmount', 'useEffect(() => { return () => { ... } }, [])'],
+              ].map(([cls, hook]) => (
+                <tr key={cls} className="border-b border-slate-100">
+                  <td className="px-3 py-2 border border-slate-200 font-mono text-purple-700 text-xs">{cls}</td>
+                  <td className="px-3 py-2 border border-slate-200 font-mono text-green-700 text-xs">{hook}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <Callout type="tip" title="useEffect ทำได้มากกว่า lifecycle เดิม">
+          useEffect สามารถรวม mount + update + unmount ไว้ในที่เดียว และแยก concerns ได้ดีกว่า
+          เช่น แยก timer effect กับ fetch effect ออกจากกัน แทนที่จะยัดทุกอย่างใน componentDidMount
+        </Callout>
       </Section>
 
       <Section title="Demo: useEffect 3 แบบ">
-        <DemoBox title="Timer (setInterval + cleanup) | Window Width | API Fetch">
+        <DemoBox title="Timer | Window Width | API Fetch">
           <div className="grid grid-cols-1 gap-4">
-            {/* Timer */}
             <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-              <p className="text-xs font-semibold text-purple-600 mb-2">⏱️ Timer — useEffect + setInterval + cleanup</p>
+              <p className="text-xs font-semibold text-purple-600 mb-2">⏱️ setInterval + cleanup</p>
               <div className="flex items-center gap-3">
                 <span className="text-3xl font-mono font-bold text-purple-700">{seconds}s</span>
-                <button
-                  onClick={() => setIsRunning(!isRunning)}
-                  className={`px-3 py-1.5 rounded text-sm text-white ${isRunning ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}
-                >
-                  {isRunning ? 'หยุด' : 'เริ่ม'}
-                </button>
-                <button
-                  onClick={() => { setIsRunning(false); setSeconds(0) }}
-                  className="px-3 py-1.5 rounded text-sm bg-slate-200 hover:bg-slate-300 text-slate-700"
-                >
-                  Reset
-                </button>
+                <button onClick={() => setIsRunning(!isRunning)} className={`px-3 py-1.5 rounded text-sm text-white ${isRunning ? 'bg-red-500' : 'bg-green-500'}`}>{isRunning ? 'หยุด' : 'เริ่ม'}</button>
+                <button onClick={() => { setIsRunning(false); setSeconds(0) }} className="px-3 py-1.5 rounded text-sm bg-slate-200 text-slate-700">Reset</button>
               </div>
             </div>
-
-            {/* Window width */}
             <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-              <p className="text-xs font-semibold text-green-600 mb-1">📏 Window Width — resize event listener + cleanup</p>
-              <p className="text-sm text-green-700">ลอง resize หน้าต่างดู: <strong>{windowWidth}px</strong></p>
+              <p className="text-xs font-semibold text-green-600 mb-1">📏 resize event + cleanup — ลอง resize browser</p>
+              <p className="text-sm text-green-700">Window width: <strong>{windowWidth}px</strong></p>
             </div>
-
-            {/* API fetch */}
             <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-xs font-semibold text-blue-600 mb-2">🌐 Fetch — useEffect([postId])</p>
-              <div className="flex gap-2 mb-2">
+              <p className="text-xs font-semibold text-blue-600 mb-2">🌐 Fetch ตาม postId ([postId] dependency)</p>
+              <div className="flex gap-1 mb-2">
                 {[1, 2, 3, 4, 5].map((id) => (
-                  <button
-                    key={id}
-                    onClick={() => setPostId(id)}
-                    className={`w-7 h-7 rounded text-xs font-medium ${postId === id ? 'bg-blue-600 text-white' : 'bg-white border border-blue-300 text-blue-600'}`}
-                  >
-                    {id}
-                  </button>
+                  <button key={id} onClick={() => setPostId(id)} className={`w-7 h-7 rounded text-xs ${postId === id ? 'bg-blue-600 text-white' : 'bg-white border border-blue-300 text-blue-600'}`}>{id}</button>
                 ))}
               </div>
-              {loading ? (
-                <p className="text-blue-400 text-sm">Loading post {postId}...</p>
-              ) : fetchedPost ? (
-                <div>
-                  <p className="text-xs font-semibold text-blue-800 truncate">{fetchedPost.title}</p>
-                  <p className="text-xs text-blue-600 mt-1 line-clamp-2">{fetchedPost.body}</p>
-                </div>
-              ) : null}
+              {loading ? <p className="text-blue-400 text-xs">Loading...</p> : fetchedPost && <p className="text-blue-800 text-xs font-medium truncate">{fetchedPost.title}</p>}
             </div>
           </div>
         </DemoBox>
       </Section>
+
+      <Exercise lessonId="useeffect" questions={questions} onPass={onPass} />
     </div>
   )
 }

@@ -3,10 +3,73 @@ import CodeBlock from '../components/CodeBlock'
 import Callout from '../components/Callout'
 import DemoBox from '../components/DemoBox'
 import Section from '../components/Section'
+import Exercise, { ExQuestion } from '../components/Exercise'
 
 const colorOptions = ['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'purple', 'pink']
 
-export default function L12_Tailwind() {
+const questions: ExQuestion[] = [
+  {
+    type: 'choice',
+    question: 'Tailwind CSS ใช้แนวคิดอะไรในการเขียน style?',
+    choices: [
+      'Component-first — เขียน class เดียวแทน style ทั้งหมด',
+      'Utility-first — ใช้ class เล็กๆ แต่ละตัวทำหน้าที่เดียว แทนที่ CSS file แยก',
+      'Semantic CSS — ใช้ชื่อ class ตามความหมาย เช่น .card .header',
+      'CSS-in-JS — เขียน style ใน JavaScript object',
+    ],
+    correct: 1,
+    explanation:
+      'Tailwind เป็น Utility-first CSS Framework แต่ละ class ทำหน้าที่เดียว เช่น `p-4` = padding 16px, `text-blue-600` = text สีน้ำเงิน เขียน style ตรงใน className ไม่ต้องสลับไปไฟล์ CSS',
+  },
+  {
+    type: 'fill',
+    question: 'Tailwind class ที่ใช้ทำให้ element เป็น flex container คือ class `___`',
+    hint: 'เหมือน CSS property `display: flex`',
+    correct: ['flex'],
+    explanation:
+      '`flex` = `display: flex` ใน Tailwind ใช้คู่กับ `items-center` (align-items: center), `justify-between` (justify-content: space-between), `gap-4` (gap: 1rem) เพื่อจัด layout',
+  },
+  {
+    type: 'choice',
+    question: 'Tailwind breakpoint prefix `md:` หมายความว่าอะไร?',
+    choices: [
+      'มีผลเฉพาะหน้าจอขนาดกลาง (tablet) เท่านั้น',
+      'มีผลตั้งแต่ขนาด md (768px) ขึ้นไป — Mobile First approach',
+      'มีผลเฉพาะบน mobile',
+      'บน desktop ใช้ md: บน mobile ไม่ใช้',
+    ],
+    correct: 1,
+    explanation:
+      'Tailwind ใช้ Mobile First — class ที่ไม่มี prefix ใช้กับทุกขนาด, prefix เพิ่ม rule สำหรับขนาดนั้นขึ้นไป `md:` = 768px ขึ้นไป ดังนั้น `grid-cols-1 md:grid-cols-2` = 1 col บน mobile, 2 col บน tablet ขึ้นไป',
+  },
+  {
+    type: 'choice',
+    question: 'ต้องการ hover effect บน button ใช้ Tailwind ยังไง?',
+    code: `<button className="bg-blue-500 ___ transition-colors">
+  Click me
+</button>`,
+    codeLanguage: 'tsx',
+    choices: [
+      ':hover:bg-blue-600',
+      'onHover:bg-blue-600',
+      'hover:bg-blue-600',
+      'hover={bg-blue-600}',
+    ],
+    correct: 2,
+    explanation:
+      'ใช้ prefix `hover:` ก่อน utility class เช่น `hover:bg-blue-600` จะมีผลเมื่อ mouse hover element นั้น ควรใส่ `transition-colors` ด้วยเพื่อให้มี animation smooth',
+  },
+  {
+    type: 'fill',
+    question: 'Tailwind class ที่ทำให้ element อยู่กึ่งกลางแนวนอน (margin auto left-right) คือ `mx-___`',
+    hint: 'ย่อมาจาก "automatic"',
+    correct: ['auto', 'mx-auto'],
+    explanation:
+      '`mx-auto` = `margin-left: auto; margin-right: auto` ทำให้ element กึ่งกลาง horizontally ใช้กับ block element ที่มีความกว้างกำหนด เช่น `max-w-4xl mx-auto` เพื่อจำกัดความกว้างและจัดกึ่งกลาง',
+  },
+]
+
+export default function L12_Tailwind({ onPass }: { onPass?: () => void }) {
   const [selectedColor, setSelectedColor] = useState('indigo')
   const [size, setSize] = useState<'sm' | 'base' | 'lg' | 'xl'>('base')
   const [rounded, setRounded] = useState<'none' | 'md' | 'xl' | 'full'>('xl')
@@ -50,6 +113,47 @@ export default function L12_Tailwind() {
             <div key={b.title} className="p-3 bg-cyan-50 rounded-lg border border-cyan-200">
               <div className="font-semibold text-cyan-800 text-sm">{b.icon} {b.title}</div>
               <div className="text-cyan-600 text-xs mt-1">{b.desc}</div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="🔬 Anatomy ของ Tailwind Class">
+        <CodeBlock
+          language="tsx"
+          code={`{/* ① Property prefix — บอกว่า style ไหน */}
+{/* ② Scale/Value — บอกว่าค่าเท่าไหร่ */}
+{/* ③ Responsive prefix — บอกว่าใช้กับขนาดไหน */}
+{/* ④ State prefix — บอกว่า state ไหน */}
+
+<div className="
+  p-4          {/* ① p = padding, ② 4 = 16px */}
+  md:p-8       {/* ③ md: = ≥768px, ① p = padding, ② 8 = 32px */}
+  text-blue-600 {/* ① text = color, ② blue-600 = สีน้ำเงินระดับ 600 */}
+  hover:text-blue-800  {/* ④ hover: = เมื่อ hover, เปลี่ยนสีเข้มขึ้น */}
+  bg-white     {/* ① bg = background, ② white = สีขาว */}
+  rounded-xl   {/* ① rounded = border-radius, ② xl = 12px */}
+  shadow-md    {/* ① shadow = box-shadow, ② md = medium shadow */}
+  flex         {/* display: flex */}
+  items-center {/* align-items: center */}
+  gap-4        {/* gap: 16px */}
+  transition-colors  {/* transition effect สำหรับ color changes */}
+">
+`}
+        />
+        <div className="grid grid-cols-2 gap-3 mt-3">
+          {[
+            { prefix: 'p-, m-', css: 'padding, margin', scale: '1=4px, 2=8px, 4=16px, 8=32px' },
+            { prefix: 'text-', css: 'font-size หรือ color', scale: 'xs, sm, base, lg, xl / slate-600' },
+            { prefix: 'bg-', css: 'background-color', scale: 'white, slate-50, blue-500' },
+            { prefix: 'rounded-', css: 'border-radius', scale: 'sm, md, lg, xl, full' },
+            { prefix: 'w-, h-', css: 'width, height', scale: '4=16px, full=100%, screen=100vw' },
+            { prefix: 'flex, grid', css: 'display type', scale: 'flex-col, grid-cols-3' },
+          ].map((item) => (
+            <div key={item.prefix} className="p-2 bg-cyan-50 rounded border border-cyan-100">
+              <code className="text-cyan-700 font-bold text-xs">{item.prefix}</code>
+              <p className="text-cyan-600 text-xs mt-0.5">{item.css}</p>
+              <p className="text-cyan-400 text-xs">{item.scale}</p>
             </div>
           ))}
         </div>
@@ -325,6 +429,8 @@ export default function L12_Tailwind() {
           </div>
         </DemoBox>
       </Section>
+
+      <Exercise lessonId="tailwind" questions={questions} onPass={onPass} />
     </div>
   )
 }

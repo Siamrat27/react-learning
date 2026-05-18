@@ -4,6 +4,7 @@ import CodeBlock from '../components/CodeBlock'
 import Callout from '../components/Callout'
 import DemoBox from '../components/DemoBox'
 import Section from '../components/Section'
+import Exercise, { ExQuestion } from '../components/Exercise'
 
 interface Post {
   id: number
@@ -20,7 +21,62 @@ interface User {
   website: string
 }
 
-export default function L08_Axios() {
+const questions: ExQuestion[] = [
+  {
+    type: 'choice',
+    question: 'ข้อใดคือความแตกต่างหลักระหว่าง fetch และ Axios?',
+    choices: [
+      'fetch ฟรี Axios ต้องเสียเงิน',
+      'Axios parse JSON อัตโนมัติ และ throw error เมื่อ status 4xx/5xx แต่ fetch ต้องทำเอง',
+      'fetch เร็วกว่า Axios มาก',
+      'Axios ใช้ได้แค่ใน Node.js ไม่ใช่ browser',
+    ],
+    correct: 1,
+    explanation:
+      'ความแตกต่างหลัก: 1) Axios auto-parse JSON → ได้ response.data ทันที ส่วน fetch ต้อง await res.json() เอง 2) Axios throw error เมื่อ HTTP 4xx/5xx ส่วน fetch ถือว่า "success" แม้ 404 ต้องเช็ค response.ok เอง',
+  },
+  {
+    type: 'fill',
+    question: 'เติมให้ครบ: `const { ___ } = await axios.get<User[]>("/api/users")` — property ที่เก็บ response body',
+    hint: 'property ของ AxiosResponse ที่เก็บ parsed JSON',
+    correct: ['data'],
+    explanation:
+      'Axios response object มี property `data` ที่เก็บ response body ที่ parse เป็น JSON แล้ว: `const { data } = await axios.get(url)` เทียบกับ fetch ที่ต้อง `const data = await res.json()`',
+  },
+  {
+    type: 'choice',
+    question: 'Axios Instance ใช้สำหรับอะไร?',
+    code: `const api = axios.create({
+  baseURL: 'https://api.myapp.com/v1',
+  timeout: 10000,
+})`,
+    codeLanguage: 'typescript',
+    choices: [
+      'สร้าง axios version ใหม่',
+      'ตั้งค่า base config (URL, timeout, headers) ครั้งเดียว ใช้ได้ทุก request ที่ใช้ instance นี้',
+      'ทำให้ request เร็วขึ้น',
+      'เปิดใช้งาน CORS',
+    ],
+    correct: 1,
+    explanation:
+      'Axios Instance คือ pre-configured axios ที่มี baseURL, timeout, headers ตั้งไว้แล้ว ไม่ต้องระบุซ้ำทุก request นอกจากนี้ยังเพิ่ม interceptors สำหรับ auth token และ error handling กลางได้',
+  },
+  {
+    type: 'choice',
+    question: 'ตรวจสอบว่า error มาจาก Axios หรือเปล่ายังไง?',
+    choices: [
+      'err.type === "axios"',
+      'err instanceof Error',
+      'axios.isAxiosError(err)',
+      'err.response !== undefined',
+    ],
+    correct: 2,
+    explanation:
+      '`axios.isAxiosError(err)` เป็น type guard ที่ Axios ให้มา ถ้า return true แสดงว่า err เป็น AxiosError และมี `.response`, `.request`, `.config` ให้ใช้ ไม่ควรใช้แค่ `instanceof Error` เพราะไม่รู้ว่าเป็น axios error หรือเปล่า',
+  },
+]
+
+export default function L08_Axios({ onPass }: { onPass?: () => void }) {
   const [posts, setPosts] = useState<Post[]>([])
   const [loadingPosts, setLoadingPosts] = useState(false)
   const [newPostTitle, setNewPostTitle] = useState('')
@@ -109,6 +165,54 @@ export default function L08_Axios() {
 // หรือ import เฉพาะที่ต้องการ
 import axios, { AxiosError, AxiosResponse } from 'axios'`}
         />
+      </Section>
+
+      <Section title="🔬 Anatomy ของ Axios GET Request">
+        <CodeBlock
+          language="tsx"
+          code={`// ① import axios
+import axios from 'axios'
+
+// ② กำหนด type ของ data ที่ expect
+interface User {
+  id: number
+  name: string
+  email: string
+}
+
+async function fetchUser(id: number) {
+  try {
+    // ③ axios.get<Type>(url, config?)
+    //    └── <User> = generic type บอกว่า response.data มี type User
+    const response = await axios.get<User>(\`/api/users/\${id}\`)
+    //    ↑ response มี type: AxiosResponse<User>
+
+    // ④ response.data = response body (JSON parsed อัตโนมัติ)
+    const user = response.data   // type: User (ไม่ต้อง await .json())
+
+    // ⑤ Shorthand destructuring
+    const { data } = await axios.get<User>(\`/api/users/\${id}\`)
+    //     ↑ data มี type User
+
+    // ⑥ Query parameters ง่ายกว่า fetch
+    const { data: posts } = await axios.get('/api/posts', {
+      params: { userId: id, _limit: 10 }  // → /api/posts?userId=1&_limit=10
+    })
+
+    return user
+  } catch (err) {
+    // ⑦ ถ้า status 4xx/5xx → axios throw AxiosError อัตโนมัติ
+    if (axios.isAxiosError(err)) {
+      console.error(err.response?.status)   // HTTP status code
+      console.error(err.response?.data)     // error body จาก server
+    }
+  }
+}`}
+        />
+        <Callout type="info" title="ถ้าไม่ใส่ Generic Type จะเกิดอะไร?">
+          `axios.get('/api/users')` โดยไม่มี `&lt;User[]&gt;` จะได้ `data` เป็น `any`
+          TypeScript จะไม่ช่วยตรวจสอบ type ให้ ควรใส่ generic เสมอเพื่อ type safety
+        </Callout>
       </Section>
 
       <Section title="GET Request — ดึงข้อมูล">
@@ -332,6 +436,8 @@ async function fetchData() {
           </div>
         </DemoBox>
       </Section>
+
+      <Exercise lessonId="axios" questions={questions} onPass={onPass} />
     </div>
   )
 }

@@ -3,8 +3,68 @@ import CodeBlock from '../components/CodeBlock'
 import Callout from '../components/Callout'
 import DemoBox from '../components/DemoBox'
 import Section from '../components/Section'
+import Exercise, { ExQuestion } from '../components/Exercise'
 
-export default function L02_ComponentsJSX() {
+const questions: ExQuestion[] = [
+  {
+    type: 'choice',
+    question: 'ข้อใดเป็น JSX ที่ถูกต้อง?',
+    code: `// เลือกอันที่ถูกต้อง`,
+    choices: [
+      '<div class="box"><img src="x.png"></div>',
+      '<div className="box"><img src="x.png" /></div>',
+      '<Div className="box"><img src="x.png" /></Div>',
+      '<div className="box"><img src="x.png">',
+    ],
+    correct: 1,
+    explanation:
+      'JSX ใช้ className (ไม่ใช่ class), tag ต้องปิดเสมอ (img ต้องมี /), และ HTML element ต้องตัวเล็ก (div ไม่ใช่ Div)',
+  },
+  {
+    type: 'fill',
+    question: 'ใน JSX เมื่อต้องการแสดงค่าตัวแปร JavaScript ต้องใช้เครื่องหมาย ___',
+    hint: 'เป็น bracket 2 ตัว',
+    correct: ['{}', '{ }'],
+    explanation:
+      'ใช้ {} (curly braces) เพื่อแทรก JavaScript expression ใดๆ ใน JSX เช่น {name}, {count + 1}, {isActive ? "yes" : "no"}',
+  },
+  {
+    type: 'choice',
+    question: 'ทำไมต้องใส่ key prop เมื่อ render list ด้วย .map()?',
+    choices: [
+      'เพื่อให้ CSS selector ทำงานได้',
+      'React บังคับให้ใส่ ไม่งั้น error',
+      'React ใช้ key เพื่อรู้ว่า item ไหนเปลี่ยน/เพิ่ม/ลบ ทำให้ update เร็วและถูกต้อง',
+      'key ใช้สำหรับ sorting ข้อมูล',
+    ],
+    correct: 2,
+    explanation:
+      'React ใช้ key เพื่อ track แต่ละ item ใน list ถ้าไม่มี key React ต้อง re-render ทั้งหมดแทนที่จะ update เฉพาะ item ที่เปลี่ยน ส่งผลต้อง performance และอาจเกิด bugs กับ state ของ item',
+  },
+  {
+    type: 'choice',
+    question: 'Fragment (<> </>) ใช้ทำอะไร?',
+    choices: [
+      'สร้าง div ที่มองไม่เห็น',
+      'ครอบ elements หลายตัวโดยไม่เพิ่ม DOM element จริงๆ',
+      'ทำให้ component โหลดเร็วขึ้น',
+      'แทน return statement',
+    ],
+    correct: 1,
+    explanation:
+      'JSX ต้องมี root element เดียว ถ้าไม่อยากเพิ่ม div ที่ไม่จำเป็นใน DOM ให้ใช้ Fragment <> </> มันจะหายไปจาก DOM จริงๆ เหลือแค่ children',
+  },
+  {
+    type: 'fill',
+    question: 'เติม operator ที่ใช้แสดง element เมื่อ condition เป็น true เท่านั้น: `{isLoggedIn ___ <Dashboard />}`',
+    hint: 'short-circuit operator',
+    correct: ['&&', 'and'],
+    explanation:
+      '&& (AND operator) — ถ้า isLoggedIn เป็น true จะ render ส่วนขวา ถ้าเป็น false จะ render ไม่มีอะไร (short-circuit evaluation)',
+  },
+]
+
+export default function L02_ComponentsJSX({ onPass }: { onPass?: () => void }) {
   const [showBio, setShowBio] = useState(true)
   const [items, setItems] = useState(['Apple', 'Banana', 'Cherry'])
   const [newItem, setNewItem] = useState('')
@@ -33,143 +93,238 @@ function App() {
   return (
     <div>
       <Button />   {/* ใช้ Component เหมือน tag */}
-      <Button />   {/* ใช้กี่ครั้งก็ได้ */}
+      <Button />   {/* ใช้กี่ครั้งก็ได้ — reusable! */}
       <Button />
     </div>
   )
 }`}
         />
         <Callout type="warning" title="กฎสำคัญ: ชื่อ Component ต้องขึ้นต้นด้วยตัวพิมพ์ใหญ่">
-          <code>&lt;Button /&gt;</code> = React Component<br/>
-          <code>&lt;button /&gt;</code> = HTML element ธรรมดา<br/>
-          ถ้าชื่อเล็ก React จะไม่รู้ว่าเป็น component
+          <code>&lt;Button /&gt;</code> = React Component (เรียก function Button())<br />
+          <code>&lt;button /&gt;</code> = HTML element ธรรมดา<br />
+          ถ้าชื่อเล็ก React จะส่ง <code>&lt;greeting&gt;</code> เป็น string ให้ DOM แทนที่จะเรียก function
         </Callout>
       </Section>
 
-      <Section title="JSX คืออะไร?">
-        <p>
-          <strong>JSX</strong> (JavaScript XML) คือ syntax พิเศษที่ทำให้เขียน HTML ใน JavaScript ได้
-          มันไม่ใช่ HTML จริงๆ — Babel จะแปลงมันเป็น <code>React.createElement()</code> ก่อน browser จะเข้าใจ
-        </p>
+      <Section title="🔬 กายวิภาค JSX — แต่ละส่วนทำอะไร?">
         <CodeBlock
           language="tsx"
-          filename="JSX vs JS"
-          code={`// สิ่งที่เราเขียน (JSX)
-const element = <h1 className="title">Hello, World!</h1>
-
-// สิ่งที่ Babel แปลงให้ (JavaScript จริงๆ)
-const element = React.createElement(
-  'h1',
-  { className: 'title' },
-  'Hello, World!'
-)
-// เห็นมั้ยว่า JSX แค่ shorthand สำหรับ createElement()`}
+          code={`//      ┌── tag name (HTML element หรือ Component)
+//      │      ┌── attribute (prop ใน JSX)
+//      │      │           ┌── ค่าของ attribute
+//      ↓      ↓           ↓
+      <button  onClick={handleClick}  className="btn"  disabled={false}>
+//                        ↑                   ↑               ↑
+//                    {} = JS expression   string ใส่ ""   boolean ใส่ {}
+        Click!
+//      ↑ children — content ระหว่าง opening/closing tag
+      </button>
+//      ↑ closing tag ต้องตรงกับ opening`}
         />
 
-        <h3 className="font-bold text-slate-800 mt-6 mb-3">JSX Rules — ข้อแตกต่างจาก HTML</h3>
-        <div className="space-y-3">
+        <div className="space-y-3 mt-4">
+          <h3 className="font-bold text-slate-800">ความแตกต่าง JSX vs HTML ที่พบบ่อย:</h3>
           {[
-            { rule: 'ต้องมี Root element เดียว', bad: '<p>A</p><p>B</p>', good: '<><p>A</p><p>B</p></>', note: 'ใช้ Fragment <> </> ถ้าไม่อยากเพิ่ม div' },
-            { rule: 'ใช้ className แทน class', bad: '<div class="red">', good: '<div className="red">', note: 'เพราะ class เป็น keyword ของ JS' },
-            { rule: 'ใช้ htmlFor แทน for', bad: '<label for="name">', good: '<label htmlFor="name">', note: 'เพราะ for เป็น keyword ของ JS' },
-            { rule: 'Tag ต้องปิดเสมอ', bad: '<br><img src="x">', good: '<br /><img src="x" />', note: 'Self-closing tags ต้องมี /' },
-          ].map((item) => (
-            <div key={item.rule} className="border border-slate-200 rounded-lg overflow-hidden">
-              <div className="bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">{item.rule}</div>
-              <div className="grid grid-cols-2 divide-x divide-slate-200">
-                <div className="p-3 bg-red-50">
-                  <div className="text-xs text-red-500 font-semibold mb-1">❌ ผิด (HTML)</div>
-                  <code className="text-xs text-red-700">{item.bad}</code>
-                </div>
-                <div className="p-3 bg-green-50">
-                  <div className="text-xs text-green-500 font-semibold mb-1">✅ ถูก (JSX)</div>
-                  <code className="text-xs text-green-700">{item.good}</code>
-                </div>
-              </div>
-              <div className="px-3 py-1.5 bg-yellow-50 text-xs text-yellow-700">💡 {item.note}</div>
+            { attr: 'class', jsx: 'className', reason: 'class เป็น reserved word ใน JavaScript' },
+            { attr: 'for', jsx: 'htmlFor', reason: 'for เป็น reserved word ใน JavaScript (for loop)' },
+            { attr: 'onclick', jsx: 'onClick', reason: 'JSX ใช้ camelCase: onClick, onChange, onSubmit' },
+            { attr: 'style="color:red"', jsx: 'style={{ color: "red" }}', reason: 'style ต้องเป็น JS object ใน {{}}' },
+            { attr: '<br>', jsx: '<br />', reason: 'ทุก tag ต้องปิด รวม self-closing tags' },
+          ].map((row) => (
+            <div key={row.attr} className="grid grid-cols-5 gap-2 items-start text-sm">
+              <code className="col-span-1 text-red-600 bg-red-50 px-2 py-1 rounded text-xs">{row.attr}</code>
+              <span className="text-slate-400 text-center">→</span>
+              <code className="col-span-1 text-green-700 bg-green-50 px-2 py-1 rounded text-xs">{row.jsx}</code>
+              <span className="col-span-2 text-slate-500 text-xs leading-tight">{row.reason}</span>
             </div>
           ))}
         </div>
       </Section>
 
-      <Section title="Expressions ใน JSX — ใช้ { }">
+      <Section title="JSX คืออะไรจริงๆ? (ภายใต้ hood)">
         <p>
-          ใช้ <code>{'{}'}</code> เพื่อแทรก JavaScript expression ใดๆ ก็ได้ใน JSX
+          <strong>JSX</strong> ไม่ใช่ HTML — มันคือ syntax พิเศษที่ Babel แปลงเป็น JavaScript ก่อน browser รัน
         </p>
+        <CodeBlock
+          language="tsx"
+          filename="สิ่งที่เราเขียน vs สิ่งที่ browser เห็น"
+          code={`// สิ่งที่เราเขียน (JSX)
+const element = (
+  <h1 className="title" id="heading">
+    Hello, {name}!
+  </h1>
+)
+
+// สิ่งที่ Babel แปลงให้ (JavaScript จริงๆ)
+const element = React.createElement(
+  'h1',                              // tag name
+  { className: 'title', id: 'heading' },  // props object
+  'Hello, ',                         // children...
+  name,
+  '!'
+)
+
+// เห็นมั้ยว่า JSX แค่ shorthand สำหรับ React.createElement()
+// เราเขียน JSX เพราะอ่านง่ายกว่ามาก!`}
+        />
+        <Callout type="tip" title="JSX ต้อง return element เดียวเสมอ">
+          เพราะ <code>React.createElement()</code> return ได้ครั้งละ 1 element
+          ถ้าต้องการหลาย element ต้องใช้ wrapper หรือ Fragment <code>&lt;&gt;&lt;/&gt;</code>
+        </Callout>
+      </Section>
+
+      <Section title="Expressions ใน JSX — ใช้ { }">
+        <p>ใช้ <code>{'{}'}</code> เพื่อแทรก JavaScript expression ใดๆ ก็ได้ใน JSX</p>
         <CodeBlock
           language="tsx"
           code={`const name = "สมชาย"
 const price = 350
 const isVip = true
+const items = ['A', 'B', 'C']
 
 return (
   <div>
-    {/* ตัวแปร */}
+    {/* ✅ ตัวแปร */}
     <p>สวัสดี {name}!</p>
 
-    {/* คำนวณ */}
+    {/* ✅ คำนวณ */}
     <p>ราคา: {price * 1.07} บาท (รวม VAT)</p>
 
-    {/* ternary operator */}
-    <p>{isVip ? '⭐ VIP Member' : 'ปกติ'}</p>
+    {/* ✅ ternary operator — A ถ้า condition true, B ถ้า false */}
+    <p>{isVip ? '⭐ VIP Member' : 'สมาชิกทั่วไป'}</p>
 
-    {/* เรียก function */}
+    {/* ✅ เรียก method */}
     <p>{name.toUpperCase()}</p>
 
-    {/* ❌ if statement ใน JSX ไม่ได้ ต้องใช้ ternary หรือ && */}
-    {/* {if (isVip) { ... }}  — ผิด! */}
+    {/* ✅ array.length */}
+    <p>มี {items.length} รายการ</p>
+
+    {/* ❌ if statement ใช้ใน JSX ไม่ได้ */}
+    {/* {if (isVip) { return <span>VIP</span> }} */}
+
+    {/* ✅ แก้ด้วย && หรือ ternary */}
+    {isVip && <span>⭐ VIP</span>}
   </div>
 )`}
         />
+        <Callout type="warning" title="ถ้าใส่ if statement ใน JSX จะเกิดอะไร?">
+          Error ทันที: <code>Unexpected token 'if'</code> — เพราะ <code>{`{}`}</code> ใน JSX รับได้แค่ expression
+          (อะไรก็ตามที่มีค่า) ไม่ใช่ statement (เช่น if, for, while)
+        </Callout>
+      </Section>
+
+      <Section title="Event Handling — รับ Input จาก User">
+        <CodeBlock
+          language="tsx"
+          code={`function Form() {
+  const [text, setText] = useState('')
+
+  // Event handler รับ event object เสมอ
+  // e.target.value = ค่าที่ user พิมพ์
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setText(e.target.value)
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()   // ❗ ต้องมี! ป้องกัน browser reload หน้า
+    console.log('submitted:', text)
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* onChange fire ทุกครั้งที่พิมพ์ */}
+      <input
+        value={text}
+        onChange={handleChange}
+        // หรือเขียนสั้นกว่า:
+        // onChange={(e) => setText(e.target.value)}
+      />
+      <button type="submit">ส่ง</button>
+      <p>พิมพ์: {text}</p>
+    </form>
+  )
+}`}
+        />
+        <Callout type="info" title="Common Events ที่ใช้บ่อย">
+          <code>onClick</code> — กดปุ่ม / คลิก element<br />
+          <code>onChange</code> — พิมพ์ใน input / เปลี่ยนค่า<br />
+          <code>onSubmit</code> — ส่ง form<br />
+          <code>onKeyDown</code> — กดปุ่มบน keyboard<br />
+          <code>onMouseEnter</code> / <code>onMouseLeave</code> — hover
+        </Callout>
       </Section>
 
       <Section title="Conditional Rendering">
-        <p>การแสดง UI แบบมีเงื่อนไข ทำได้ 2 วิธีหลัก</p>
         <CodeBlock
           language="tsx"
-          code={`function UserCard({ isLoggedIn, isAdmin }: { isLoggedIn: boolean; isAdmin: boolean }) {
+          code={`function UserPanel({ isLoggedIn, isAdmin, loading }: {
+  isLoggedIn: boolean
+  isAdmin: boolean
+  loading: boolean
+}) {
+  // ① Early return — ถ้า loading ให้ return ก่อน ไม่ต้องดู condition อื่น
+  if (loading) return <Spinner />
+
   return (
     <div>
-      {/* วิธี 1: && operator — แสดงถ้า condition เป็น true */}
+      {/* ② && — แสดงเฉพาะเมื่อ true */}
       {isLoggedIn && <p>ยินดีต้อนรับ!</p>}
 
-      {/* วิธี 2: ternary — แสดง A หรือ B */}
-      {isLoggedIn ? <p>เข้าสู่ระบบแล้ว</p> : <p>กรุณา login</p>}
+      {/* ③ ternary — แสดง A หรือ B */}
+      {isLoggedIn
+        ? <p>เข้าสู่ระบบแล้ว</p>
+        : <button>Login</button>
+      }
 
-      {/* ซ้อนกันได้ */}
+      {/* ④ ซ้อนกันได้ */}
       {isLoggedIn && isAdmin && <button>Admin Panel</button>}
+
+      {/* ⚠️ ระวัง: 0 && <p>text</p> จะ render เลข 0 ออกมา! */}
+      {/* ✅ แก้ด้วย: Boolean(count) && <p>text</p> */}
     </div>
   )
 }`}
         />
+        <Callout type="warning" title="ข้อควรระวัง: 0 && element">
+          JavaScript ถือว่า <code>0</code> เป็น falsy แต่ JSX จะ render <code>0</code> ออกมาเป็นตัวเลข!
+          ถ้าเขียน <code>{`{count && <List />}`}</code> และ count = 0 จะเห็นเลข 0 บนหน้าจอ
+          แก้ด้วย <code>{`{count > 0 && <List />}`}</code> หรือ <code>{`{!!count && <List />}`}</code>
+        </Callout>
       </Section>
 
       <Section title="List Rendering — .map()">
-        <p>
-          การ render รายการ ใช้ <code>.map()</code> และต้องใส่ <code>key</code> prop ที่ไม่ซ้ำกันทุกครั้ง
-        </p>
+        <p>การ render รายการ ใช้ <code>.map()</code> และต้องใส่ <code>key</code> prop ที่ไม่ซ้ำกันทุกครั้ง</p>
         <CodeBlock
           language="tsx"
-          code={`const fruits = ['Apple', 'Banana', 'Cherry']
+          code={`interface Product {
+  id: number
+  name: string
+  price: number
+}
+
+const products: Product[] = [
+  { id: 1, name: 'Apple', price: 20 },
+  { id: 2, name: 'Banana', price: 10 },
+]
 
 return (
   <ul>
-    {fruits.map((fruit, index) => (
-      // key ต้องไม่ซ้ำ — ใช้ id จาก data หรือค่าที่ unique
+    {products.map((product) => (
+      // ✅ ใช้ id จาก data เป็น key — unique และ stable
+      <li key={product.id}>
+        {product.name} — {product.price} บาท
+      </li>
       // ❌ อย่าใช้ index เป็น key ถ้าลำดับเปลี่ยนได้
-      <li key={fruit}>{fruit}</li>
+      // key={index}  ← ถ้าเพิ่ม/ลบ item ลำดับเปลี่ยน → React สับสน → bugs
     ))}
   </ul>
 )
 
-// key สำคัญแค่ไหน?
-// React ใช้ key เพื่อรู้ว่า item ไหนเปลี่ยน/ลบ/เพิ่ม
-// ถ้าไม่มี key → React ต้อง re-render ทั้งหมด (ช้า + bugs)`}
+// กรณีที่ใช้ index เป็น key ได้: list ที่ไม่มีวันเปลี่ยนลำดับ/เพิ่ม/ลบ`}
         />
-        <Callout type="warning" title="ทำไม key ถึงสำคัญ?">
-          ลองจิตนาการว่ามีรายการ A, B, C แล้วลบ B ออก
-          ถ้าไม่มี key → React คิดว่า A เปลี่ยนเป็น A, B เปลี่ยนเป็น C, ลบ C
-          ถ้ามี key → React รู้ว่าลบ B แค่อันเดียว
+        <Callout type="warning" title="ถ้าไม่ใส่ key จะเกิดอะไร?">
+          React จะ warn ใน console: <code>Each child in a list should have a unique "key" prop</code>
+          และถ้า list เปลี่ยนแปลง React อาจ re-render ผิด item หรือ state ของ item ผิดที่
         </Callout>
       </Section>
 
@@ -201,12 +356,8 @@ return (
                 เพิ่ม
               </button>
             </div>
-
             <div>
-              <button
-                onClick={() => setShowBio(!showBio)}
-                className="text-sm text-indigo-600 underline mb-2"
-              >
+              <button onClick={() => setShowBio(!showBio)} className="text-sm text-indigo-600 underline mb-2">
                 {showBio ? 'ซ่อน' : 'แสดง'} รายการ (Conditional Rendering)
               </button>
               {showBio && (
@@ -217,12 +368,7 @@ return (
                     items.map((item) => (
                       <li key={item} className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
                         <span className="text-sm">🍎 {item}</span>
-                        <button
-                          onClick={() => setItems(items.filter((i) => i !== item))}
-                          className="text-red-400 hover:text-red-600 text-xs"
-                        >
-                          ลบ
-                        </button>
+                        <button onClick={() => setItems(items.filter((i) => i !== item))} className="text-red-400 hover:text-red-600 text-xs">ลบ</button>
                       </li>
                     ))
                   )}
@@ -232,6 +378,8 @@ return (
           </div>
         </DemoBox>
       </Section>
+
+      <Exercise lessonId="components-jsx" questions={questions} onPass={onPass} />
     </div>
   )
 }
