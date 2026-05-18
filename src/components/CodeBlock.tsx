@@ -66,8 +66,9 @@ export default function CodeBlock({ code, language = 'tsx', filename }: CodeBloc
           language={language}
           style={vscDarkPlus}
           customStyle={{ margin: 0, borderRadius: 0, fontSize: '0.875rem', lineHeight: '1.6' }}
-          showLineNumbers
-          lineNumberStyle={{ color: '#4b5563', minWidth: '2.5em' }}
+          useInlineStyles
+          PreTag="div"
+          CodeTag="div"
         >
           {code.trim()}
         </SyntaxHighlighter>
